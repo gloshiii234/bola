@@ -1,0 +1,157 @@
+>The main objective of this code was to create a custom database comprising of alleles of BOLA-DRB3 exon so that i can blast my sanger sequenced BOLA-DRB3 alleles
+to identify similar alleles. 
+
+conda install -c bioconda blast  ##Step one i installed blast       
+                                                                                                                                                                                                                                                                                                                
+blastn -version  ##Here i was checking for the version of blastn                                                                                                                                                               
+                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+makeblastdb -in alleles.fasta.txt -dbtype nucl -out mydatabase   ##Here i was creating my custom database using my file alleles.fasta.txt  
+                                                                                                                                                   
+nano blast_file.sh    ##Here i was opeing the file with the script to be executed for performing the blastn search in a text editor
+
+#CONTENTS OF THE BLAST_FILE.SH
+
+for i in $(ls *fa)
+do
+    output=$(echo $i | cut -f1 -d".")
+    blastn -query $i -db mydatabase -outfmt "6 qseqid sseqid pident length evalue bitscore qcovs qlen" -out ${output}_blast.tsv
+done
+
+                                                                                                                                                          
+                                                                                                                                                             
+blastn query -h    ##Here i was finding out how blastn works   
+                                                                                                                                                          
+bash blast_file.sh   ##Executing the script to perform a blast    
+                                                                                                                                                       
+1012  blastn -query Bola_fasta_7.fasta -db mydatabase -outfmt "6 qseqid sseqid pident length evalue bitscore qcovs qlen" -out test.tsv 
+##I was unable to run the script, and i executed the blast code in the terminal by providing the querry file to my custom database and getting an output in test.tsv
+##bastn is the nucleotide bdatabase, Bola_fasta_7.fasta contained my query alles, mydatabase is the custom database i created from IPD-MHC data, outfmt decsribes
+output format of the results and they are to be organized in six columns query sequence id(qseqid), dbsequence id(sseqid), percentage identity(pident), alignment 
+length(length) evalue scores, bitscore results, query coverage per subject(qcovs) and  query sequence length(qlen)
+                                               
+## ls -ltrh
+This command lists the files in the current directory in long format, sorted by modification time, with human-readable file sizes.
+
+## vi test.tsv
+This command was used to open the file named "test.tsv" with our output results in the vi text editor, allowing us to view and edit its contents
+
+## cut -f1 test.tsv
+This command extracts the first field (column) from the file "test.tsv", the fields are separated by tabs by default.
+
+## cut -f1 test.tsv | sort -u
+This command performs the same extraction as the previous line but pipes the output to the sort -u command. It sorts the extracted field in ascending 
+order and removes duplicate entries.
+
+## cut -f1 test.tsv | sort -u | wc -l
+This command counts the number of unique entries in the extracted field. It takes the output from the previous line, pipes it to wc -l
+(word count with the -l option for counting lines), and displays the count.
+
+## grep -c ">" Bola_fasta_7.fasta
+This command searches for lines in the file "Bola_fasta_7.fasta" that contain the ">" symbol and counts the number of occurrences.
+
+## sort -k5,5n test.tsv | less -S
+This command sorts the file "test.tsv" based on the fifth field (column) in numeric order. The output is then piped to less -S, which allows 
+you to scroll through the sorted data in a page-by-page manner while preserving the original tabular format. 
+
+> My next objective is to filter my results based on the evalue results in column 5 to get the first evalue for each file and save the output in a new file
+
+##awk '!seen[$5]++' test*.tsv | sort -k5,5n | less -S > bola_test.tsv
+
+>    awk '!seen[$5]++' test*.tsv: This command uses the awk utility to extract the first occurrence of each unique value in column 5 
+     across all the files matching the pattern test*.tsv. The associative array seen keeps track of the values encountered, and the !seen[$5]++
+      condition ensures that only the first occurrence of each value is selected.
+
+    sort -k5,5n: This command sorts the extracted lines based on the fifth field in numeric order.
+
+    less -S: This command enables scrolling through the sorted and filtered output in a page-by-page manner.
+
+    > bola_test.tsv: This part of the command redirects the output to a new file named "bola_test.tsv" instead of displaying it on the terminal.                                                                                                                                           
+
+## I ran the above code and it gave an output however, the results were duplicated where you would find sample 1 has several outputs yet i expected only
+one result from each unique value.
+
+> The next objective is to sort the second column too with alleles to determine which allele is appearing highest.
+
+ cat bola_test*.tsv | awk '!seen[$5]++' | sort -k2,2 | uniq -c | sort -nr > allele_frequency_new.tsv
+    
+    cat test*.tsv: This command concatenates all the files matching the pattern test*.tsv into a single stream of data.
+
+    awk '!seen[$5]++': This awk command extracts the first occurrence of each unique value in column 5 across all the files.
+
+    sort -k2,2: This command sorts the data based on the second column (allele column) in alphabetical order.
+
+    uniq -c: This command counts the occurrences of each unique allele.
+
+    sort -nr: This command sorts the output in reverse numerical order, with the most frequently occurring allele appearing at the top.
+
+    > allele_frequency_new.tsv: This part of the command redirects the output to a new file named "allele_frequency.tsv".
+##I ran the above code but also looks like i am getting multiple results for a single file which is not yet getting things clear since i used the file bola_test
+where i had extracted the highest hit for each file.
+
+> My next objective is to count the duplicates in the second column as i think that it might throw better light on the frequency of each allele used in the database.
+
+awk '{ count[$2]++ } END { for (allele in count) if (count[allele] > 1) print allele, count[allele] }' bola_test*.tsv > duplicate_alleles.tsv
+   
+      -awk '{ count[$2]++ }: This awk command reads each line of the files matching the pattern bola_test*.tsv and increments a
+ counter (count) for each unique value in column 2 (allele column).
+
+    -END { for (allele in count) if (count[allele] > 1) print allele, count[allele] }: At the end of processing all the lines, 
+   this part of the command loops through each unique allele in the count array. If the count of that allele is greater than 1 
+    (indicating a duplicate), it prints the allele and its count.
+
+    > duplicate_alleles.tsv: This part of the command redirects the output to a new file named "duplicate_alleles.tsv".
+##This command has worked very well and the file contains count of each appearance, my next step is sorting them in ascending order so that i can the most frequent
+allele.
+
+ sort -k1 duplicate_alleles.tsv > sorted_duplicate_alleles.tsv
+
+## So apparently the above code sorted the alleles in ascending order but i wanted the results in order so i have to go back and change the original code to allow
+sorting the output as well, however i cannot sort two querries so i am going to focus on sorting the output only.
+
+> sort -k2,2nr duplicate_alleles.tsv > sorted_duplicate_alleles.tsv
+    -k2,2 specifies that the sorting should be based on the second field (allele count).
+    nr specifies that the sorting should be in reverse numerical order (from highest to lowest count).
+## The above code has worked very well, and the highest occuring allele is appearing 18 times.
+
+
+##So i have done several sortings but the best sorting may be the one where we have the allele names assigned to our query files so that we can be able to arrange the alleles
+in ascending order and we can know which sample each of them has been awarded to.
+- Also, because we have a task of comparing alleles in positive and negative animals, this may help us.
+
+##I am going to start with sorting this file allele_frequency_new.tsv
+
+> I am going to start with applying headings to the file using the code below
+
+      echo "sample_num allele_id perc_identity align_length evalue_score bitscore query_coverage length_sample" > tmpfile
+    cat allele_frequency_new.tsv >> tmpfile
+     mv tmpfile allele_frequency_newest.tsv
+     ##did adjusting of spaces between headings to ensure they fit the columns
+the echo command creates a line of headings to be added and they are written in the tmpfile
+the cat command appends the contents of allele_frequency_new to the tmpfile and then using mv command we rename the tmpfile to allele_frequency_newest.tsv
+
+## so the above code has created a beautiful column well labelled file and. This file contains the several hits of our query samples and the alleles with which 
+they are similar, all details for each in all columns.
+##From here we can be able to choose the best allele for our samples.
+##However, i also want to filter this file using the alleles in order so that i can know in which samples each allele is appearing.
+##This should be able to help us know in which samples each allele is most frequent and we can compare this with our positive and negative clinical data.
+
+ sort -k2,2n allele_frequency_newest.tsv > sorted_sample_ids.tsv
+##So the above code has arranged the sample id's in ascending numeric order which wasn't the original objective but has also enabled us conclude on a stage where
+we can be able to know which samples were not found in our database thus are not appearing-*these may be our novel alleles.
+
+##So i will be assigning to sort column 3 which is our alleles column
+
+    sort -k3,3 allele_frequency_newest.tsv > sorted_allele_frequency_newest_1.tsv
+##So this code has actually sorted the alleles in ascending numeric order so we are able to know the samples with each allele hence getting frequency of each allele
+used in each database.
+
+#However, the headings have been removed in the output, so i will re-add the headings.
+
+        
+      echo "sample_num allele_id perc_identity align_length evalue_score bitscore query_coverage length_sample" > tmpfile
+    cat sorted_allele_frequency_newest_1.tsv >> tmpfile
+     mv tmpfile sorted_allele_frequency_newest_2.tsv
+
+
+##This has worked perfectly well and we shall be using the generated to make some conclusions on the data.
