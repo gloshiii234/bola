@@ -1,0 +1,42 @@
+makeblastdb -in sequences.fasta -dbtype nucl -out mydatabase
+
+for i in $(ls *fa)
+do
+    output=$(echo $i | cut -f1 -d".")
+    blastn -query $i -db mydatabase -outfmt "6 qseqid sseqid pident length evalue bitscore qcovs qlen" -out ${output}_blast.tsv
+done
+
+
+
+
+The given code is a shell script that performs a sequence database creation and subsequent nucleotide sequence comparison
+ using the BLAST (Basic Local Alignment Search Tool) program. Here's the breakdown of the code:
+
+    makeblastdb -in sequences.fasta -dbtype nucl -out mydatabase
+
+    This command creates a BLAST database from the input file sequences.fasta. The -dbtype nucl flag specifies that the sequences 
+in the input file are nucleotide sequences, and the -out mydatabase flag specifies the name of the output database.
+
+
+    for i in $(ls *fa)
+
+    This line initiates a loop that iterates over each file in the current directory with the .fa extension. The $(ls *fa) command 
+lists all files ending with .fa, and for i in assigns each file name to the variable i for each iteration.
+
+
+    output=$(echo $i | cut -f1 -d".")
+
+    This line extracts the base name of the file without the file extension. It uses the cut command to split the file name ($i) using
+ the delimiter (-d".") and extracts the first field (-f1). The resulting name is stored in the variable output.
+
+
+    blastn -query $i -db mydatabase -outfmt "6 qseqid sseqid pident length evalue bitscore qcovs qlen" -out ${output}_blast.tsv
+
+    This command performs a BLAST search using the blastn program. It compares the sequences in the file specified by the variable $i with the
+ database named mydatabase. The -outfmt flag specifies the output format of the BLAST results, which includes the following columns: query sequence ID,
+ subject sequence ID, percentage identity, alignment length, E-value, bit score, query coverage per subject, and query sequence length.
+ 
+The -out flag specifies the output file name, which is constructed using the output variable concatenated with _blast.tsv.
+
+Overall, this script creates a BLAST database from sequences.fasta and then performs sequence comparisons using blastn for each file with 
+the .fa extension in the current directory. The results of each comparison are stored in separate files with the format filename_blast.tsv.
