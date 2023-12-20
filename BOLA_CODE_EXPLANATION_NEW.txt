@@ -1,0 +1,128 @@
+##REPEAT OF BOLA ANALYSIS
+STEP ONE- DOWNLOADING IPD-MHC DATABASE ALLELES FROM WEBSITE
+
+STEP-TWO-Checking how many alleles have been downloaded
+grep -c ">" alleles.txt
+-we have 385 alleles of BOLA-DRB3 downloaded.
+
+STEP 3 CREATING A DATABASE FROM THE DOWNLOADED SEQUENCES
+conda create -n gloria
+conda activate gloria
+
+conda install -c bioconda blast  ##Step one i installed blast
+blastn -version  ##Here i was checking for the version of blastn 
+
+##RESULTS
+                                                                                                                                                                                       
+ Building a new DB, current time: 12/20/2023 12:42:01                                                                                                                                    
+New DB name:   /mnt/c/users/msaim/Downloads/BOLA/mydatabase                                                                                                                             
+New DB title:  alleles.fasta.txt                                                                                                                                                       
+ Sequence type: Nucleotide                                                                                                                                                               
+Keep MBits: T                                                                                                                                                                           
+Maximum file size: 1000000000B                                                                                                                                                          
+Adding sequences from FASTA; added 385 sequences in 0.0318611 seconds.  
+
+
+##HOW TO EXIT VI EDITOR
+press esc to be in command mode
+:wq to exit with saved changes
+:w to save changes without quitting
+:q to quit without saving changes 
+
+STEP FOUR - BLASTING THE QUERY SEQUENCES AGAINST THE IPD-MHC DATABASE
+ blastn -query Bola_merged.fa -db mydatabase -outfmt "6 qseqid sseqid pident length evalue bitscore qcovs qlen" -out test.tsv    
+##RESULTS
+ head test.tsv                                                                                       
+1.ab1   BOLA09962|BoLA-DRB3*100:03|269  96.218  238     1.99e-110       388     92      257                                                                                            
+ 1.ab1   BOLA03124|BoLA-DRB3*016:01|801  96.218  238     1.99e-110       388     92      257                                                                                            
+ 1.ab1   BOLA09996|BoLA-DRB3*100:08|269  96.218  238     1.99e-110       388     92      257                                                                                             
+1.ab1   BOLA10053|BoLA-DRB3*155:01|269  95.798  238     9.26e-109       383     92      257                                                                                            
+ 1.ab1   BOLA09968|BoLA-DRB3*120:01|269  95.798  238     9.26e-109       383     92      257                                                                                            
+ 1.ab1   BOLA09889|BoLA-DRB3*024:11|269  95.798  238     9.26e-109       383     92      
+1.ab1   BOLA09995|BoLA-DRB3*005:07|269  95.798  238     9.26e-109       383     92      257                                                                                             
+1.ab1   BOLA09994|BoLA-DRB3*087:04|269  95.798  238     9.26e-109       383     92      257                                                                                             
+1.ab1   BOLA09909|BoLA-DRB3*100:01|269  95.798  238     9.26e-109       383     92      257                                                                                             
+1.ab1   BOLA03135|BoLA-DRB3*021:01|325  93.725  255     1.20e-107       379     98      257  
+
+STEP FIVE-FILTERING THE RESULTS OF EACH BASING ON THE NUMERIC VALUE FROM LOW TO HIGHEST E-VALUE
+ sort -k5,5n test.tsv > sorted_1.txt  
+...so here the results were sorted according to the fifth column for each unique identifier
+
+STEP SIX- CREATING A SCRIPT THAT CAN FILTER ONLY THE FIRST ROW OF EACH UNIQUE IDENTIFIER
+
+ #!/bin/bash                                                                                                                                                                            
+ for i in {1..202}; do                                                                                                                                                                      
+ awk -v sample="$i" '$1 == sample {print; exit}' sorted_1.txt                                                                                                                        
+done > new_3.txt  
+
+.. noticed the output file was not generated.. rather the sorted_1.txt file is what was filtered.
+..it currently contains the first row of each unique identifier, but some had similar values so i observe duplicates
+
+#RESULT
+78.ab1  BOLA03122|BoLA-DRB3*015:01|270  92.169  166     9.99e-64        233     63      260                                                                                            
+ 78.ab1  BOLA03245|BoLA-DRB3*043:03|270  92.169  166     9.99e-64        233     63      260                                                                                            
+ 78.ab1  BOLA07780|BoLA-DRB3*015:06|269  92.169  166     9.99e-64        233     63      260                                                                                             
+78.ab1  BOLA09192|BoLA-DRB3*034:03|270  92.169  166     9.99e-64        233     63      260                                                                                             
+78.ab1  BOLA10165|BoLA-DRB3*165:01|269  92.169  166     9.99e-64        233     63      260                                                                                            
+ 78.ab1  BOLA10172|BoLA-DRB3*015:10|267  92.169  166     9.99e-64        233     63      260                                                                                            
+ 97.ab1  BOLA03299|BoLA-DRB3*047:01|249  94.118  153     9.99e-64        233     59      260                                                                                            
+ 97.ab1  BOLA09894|BoLA-DRB3*091:01|269  90.110  182     9.99e-64        233     69      260                                                                                             
+97.ab1  BOLA09910|BoLA-DRB3*099:02|269  94.118  153     9.99e-64        233     59      260   
+..so like here, if 97 had 3 rows with the same e-value.. they were all maintained.
+
+STEP SEVEN- REMOVING DUPLICATES TO MAINTAIN ONLY ONE UNIQUE IDENTIFIER FOR EACH
+ awk '!seen[$1]++' sorted_1.txt > sorted_dup.txt     
+.. so this has worked, i have kept only one unique identifier for each.
+
+STEP EIGHT -COUNTING HOW MANY UNIQUE IDENTIFIERS WE HAVE
+  cut -f1 sorted_dup.txt | uniq | wc -l 
+..we have 198 samples represented
+  wc -l sorted_dup.txt 
+..we have 198 samples represented
+
+STEP NINE - ORGANISING THE SORTED FILE IN ASCENDING ORDER 
+  sort -k1,1 sorted_dup.txt > sorted_file.txt    
+.. yes this organised them into ascending order.
+
+STEP TEN - IDENTIFYING THE MISSING VALUES
+  Given we know we have 198 samples represented, we have four that are not represented.. so we need to identify them.
+
+STEP ELEVEN- SORTING ACCORDING TO COLUMN TWO WITH IPD-MHC ALLELES TO DO ALLELE COUNTS
+     sort -k2,2 sorted_file.txt > sorted_alleles.txt  
+..so this file has organised the column 2 with alleles in order
+
+##RESULT
+10.ab1  BOLA03100|BoLA-DRB3*001:01|554  96.552  261     1.19e-122       429     99      260                                                                                            
+105.ab1 BOLA03100|BoLA-DRB3*001:01|554  97.414  232     1.19e-112       396     90      258                                                                                             
+134.ab1 BOLA03100|BoLA-DRB3*001:01|554  92.562  242     1.23e-97        346     93      261                                                                                             
+178.ab1 BOLA03100|BoLA-DRB3*001:01|554  95.935  246     1.21e-112       396     94      263                                                                                             
+39.ab1  BOLA03100|BoLA-DRB3*001:01|554  96.063  254     1.20e-117       412     97      262                                                                                            
+162.ab1 BOLA03102|BoLA-DRB3*002:01|267  93.902  246     1.23e-102       363     93      264                                                                                             
+50.ab1  BOLA03104|BoLA-DRB3*003:02:01|270       96.266  241     1.20e-112       396     93      260                                                                                     
+78.ab1  BOLA03104|BoLA-DRB3*003:02:01|270       85.603  257     1.27e-72        263     97      260                                                                                    
+92.ab1  BOLA03104|BoLA-DRB3*003:02:01|270       96.121  232     1.22e-107       379     88      263    
+
+STEP TWELVE - COUNTING THE FREQUENCIES OF COLUMN 2-EACH UNIQUE IDENTIFIER IN COLUMN TWO AND HOW MANY TIMES IT APPEARS
+  sort -k1,1nr allele_counts.txt  > new_allele_count.txt  
+..so it has counted the allele frequencies
+
+##RESULTS
+
+      6 BOLA10181|BoLA-DRB3*024:33|267
+      5 BOLA03100|BoLA-DRB3*001:01|554
+      5 BOLA03135|BoLA-DRB3*021:01|325
+      5 BOLA03154|BoLA-DRB3*031:01|654
+      4 BOLA03110|BoLA-DRB3*007:01|270
+      4 BOLA03242|BoLA-DRB3*031:03|270
+      4 BOLA03284|BoLA-DRB3*024:03|268
+      4 BOLA07782|BoLA-DRB3*068:01|269
+
+.. so we shall use these two tables as identifiers.
+
+STEP THIRTEEEN- I WANT TO READ THESE IN R AND TRY OUT FREQUENCY PLOTS
+  
+
+--I HAVE PRINTED OUT A MARKDOWN WITH THE R ANALYSIS
+
+                                                                                                                                                                                
+                                                                                                                                                                                              
